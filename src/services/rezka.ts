@@ -1,5 +1,5 @@
 import { ContentType, Stream } from 'stremio-addon-sdk';
-import { search, load } from 'rezka.ts';
+import { login } from 'rezka.ts';
 import logger from '../utils/logger';
 
 interface RezkaServiceArgs {
@@ -18,28 +18,33 @@ export const getStreamsFromRezka = async ({
     episode
 }: RezkaServiceArgs): Promise<Stream[]> => {
     try {
-        // Perform a text search on the website
-        const searchResults = await search(title);
+        if (!process.env.REZKA_LOGIN || !process.env.REZKA_PASSWORD) return [];
+
+        let rawStreams: Record<string, string> = {};
+        const targetBaseUrl = 'https://rezka.ag';
+        const client = await login(
+            process.env.REZKA_LOGIN,
+            process.env.REZKA_PASSWORD,
+            {
+                baseUrl: targetBaseUrl,
+                timeout: 30_000,
+            }
+        );
+
+        const searchResults = await client.search(title);
         if (!searchResults || searchResults.length === 0) {
             logger.notice(`[Rezka Service] No results found for: "${title}"`);
             return [];
         }
 
-        // Filter results by year (fallback to the first result if no exact match)
         const target = searchResults.find(item => parseInt(item.year) === targetYear) || searchResults[0];
-
-        const media = await load(target.url);
+        const media = await client.load(target.url);
         if (!media) {
             logger.notice(`[Rezka Service] Failed to load media page for URL: ${target.url}`);
             return [];
         }
 
-        // Initialize the correct class and fetch direct video streams
-        let rawStreams: Record<string, string> = {};
-
-        // Extract stream URLs based on media type
         if (type === 'movie') {
-            // For movies, fetch streams directly from the media root object
             rawStreams = await media.streams();
         } else if (type === 'series' && season && episode) {
             if (!media.seasons || media.seasons.length === 0) {
@@ -47,19 +52,15 @@ export const getStreamsFromRezka = async ({
                 return [];
             }
 
-            // Find the correct season by ID or fallback to index matching
             const targetSeason = media.seasons.find(s => s.id === season) || media.seasons[season - 1];
             if (!targetSeason) return [];
 
-            // Fetch episodes for the detected season
             const episodes = media.episodes(targetSeason.id);
             if (!episodes || episodes.length === 0) return [];
 
-            // Find the correct episode by episodeId or fallback to index matching
             const targetEpisode = episodes.find(e => e.episodeId === episode) || episodes[episode - 1];
             if (!targetEpisode) return [];
 
-            // Get streams for the specific episode (uses first available translation by default)
             rawStreams = await media.episode(targetSeason.id, targetEpisode.episodeId).streams();
         }
 
@@ -68,7 +69,6 @@ export const getStreamsFromRezka = async ({
             return [];
         }
 
-        // Step 5: Map raw Rezka stream data to the Stremio standard format
         return Object.entries(rawStreams).map(([quality, url]) => ({
             name: `HDRezka - ${quality}`,
             title: `${media.title}`,

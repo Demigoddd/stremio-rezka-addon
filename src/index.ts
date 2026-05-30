@@ -1,3 +1,4 @@
+import 'dotenv/config';
 // @ts-ignore
 import { addonBuilder, serveHTTP, StreamRequest } from 'stremio-addon-sdk';
 import { manifest } from './manifest';
