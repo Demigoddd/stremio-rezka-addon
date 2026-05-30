@@ -4,6 +4,7 @@ import { manifest } from './manifest';
 import { fetchMetaFromCinemeta } from './services/cinemeta';
 import { getStreamsFromRezka } from './services/rezka';
 import { parseStremioId } from './utils';
+import logger from './utils/logger';
 
 const builder = new addonBuilder(manifest);
 
@@ -23,8 +24,8 @@ builder.defineStreamHandler(async (args: StreamRequest) => {
         });
 
         return { streams };
-    } catch (err) {
-        console.error(`Error for ID ${args.id}:`, err);
+    } catch (error: any) {
+        logger.error(`[Index] Error for ID ${args.id}: ${error.message}`, {stack: error.stack});
         return { streams: [] };
     }
 });

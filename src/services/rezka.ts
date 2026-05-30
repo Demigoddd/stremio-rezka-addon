@@ -1,5 +1,6 @@
 import { ContentType, Stream } from 'stremio-addon-sdk';
 import { search, load } from 'rezka.ts';
+import logger from '../utils/logger';
 
 interface RezkaServiceArgs {
     title: string;
@@ -20,7 +21,7 @@ export const getStreamsFromRezka = async ({
         // Perform a text search on the website
         const searchResults = await search(title);
         if (!searchResults || searchResults.length === 0) {
-            console.log(`[Rezka Service] No results found for: "${title}"`);
+            logger.notice(`[Rezka Service] No results found for: "${title}"`);
             return [];
         }
 
@@ -29,7 +30,7 @@ export const getStreamsFromRezka = async ({
 
         const media = await load(target.url);
         if (!media) {
-            console.log(`[Rezka Service] Failed to load media page for URL: ${target.url}`);
+            logger.notice(`[Rezka Service] Failed to load media page for URL: ${target.url}`);
             return [];
         }
 
@@ -42,7 +43,7 @@ export const getStreamsFromRezka = async ({
             rawStreams = await media.streams();
         } else if (type === 'series' && season && episode) {
             if (!media.seasons || media.seasons.length === 0) {
-                console.log(`[Rezka Service] No seasons found for this series: ${media.title}`);
+                logger.notice(`[Rezka Service] No seasons found for this series: ${media.title}`);
                 return [];
             }
 
@@ -63,18 +64,18 @@ export const getStreamsFromRezka = async ({
         }
 
         if (!rawStreams || Object.keys(rawStreams).length === 0) {
-            console.log(`[Rezka Service] Video streams are empty for URL: ${target.url}`);
+            logger.notice(`[Rezka Service] Video streams are empty for URL: ${target.url}`);
             return [];
         }
 
         // Step 5: Map raw Rezka stream data to the Stremio standard format
         return Object.entries(rawStreams).map(([quality, url]) => ({
-            name: `HDRezka\n${quality}`,
-            title: `${media.title}\nQuality: ${quality}`,
+            name: `HDRezka - ${quality}`,
+            title: `${media.title}`,
             url: url
         }));
-    } catch (error) {
-        console.error('[Rezka Service] Critical error inside service:', error);
+    } catch (error: any) {
+        logger.error(`[Rezka Service] Error inside service: ${error.message}`, {stack: error.stack});
         // Return an empty array to prevent crashing the entire addon server
         return [];
     }
