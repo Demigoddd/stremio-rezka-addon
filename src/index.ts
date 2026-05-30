@@ -29,4 +29,4 @@ builder.defineStreamHandler(async (args: StreamRequest) => {
     }
 });
 
-serveHTTP(builder.getInterface(), { port: Number(process.env.PORT) || 7000 });
+serveHTTP(builder.getInterface(), { port: Number(process.env.PORT) || 7860 });
