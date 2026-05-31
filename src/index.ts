@@ -10,12 +10,9 @@ import logger from './utils/logger';
 const builder = new addonBuilder(manifest);
 
 builder.defineStreamHandler(async (args: StreamRequest) => {
-    const parsed = parseStremioId(args.id);
-
     try {
-        // Get title by IMDb ID
+        const parsed = parseStremioId(args.id);
         const meta = await fetchMetaFromCinemeta(parsed.imdbId, args.type);
-        // Find video url in rezka by title
         const streams = await getStreamsFromRezka({
             title: meta.title,
             targetYear: meta.targetYear,

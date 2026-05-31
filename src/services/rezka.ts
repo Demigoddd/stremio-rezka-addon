@@ -21,12 +21,11 @@ export const getStreamsFromRezka = async ({
         if (!process.env.REZKA_LOGIN || !process.env.REZKA_PASSWORD) return [];
 
         let rawStreams: Record<string, string> = {};
-        const targetBaseUrl = 'https://rezka.ag';
         const client = await login(
             process.env.REZKA_LOGIN,
             process.env.REZKA_PASSWORD,
             {
-                baseUrl: targetBaseUrl,
+                baseUrl: process.env.REZKA_MIRROR,
                 timeout: 30_000,
             }
         );
@@ -37,7 +36,7 @@ export const getStreamsFromRezka = async ({
             return [];
         }
 
-        const target = searchResults.find(item => parseInt(item.year) === targetYear) || searchResults[0];
+        const target = searchResults.find(item => parseInt(item.url.match(/-(\d{4})\.html/)?.[1] ?? '') === targetYear) || searchResults[0];
         const media = await client.load(target.url);
         if (!media) {
             logger.notice(`[Rezka Service] Failed to load media page for URL: ${target.url}`);
